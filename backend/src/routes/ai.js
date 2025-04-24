@@ -4,9 +4,24 @@ const { body, validationResult } = require('express-validator');
 const OpenAI = require('openai');
 const auth = require('../middleware/auth');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Create OpenAI client with error handling
+let openai;
+try {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+} catch (error) {
+  console.error('Failed to initialize OpenAI client:', error);
+}
+
+// Fallback suggestions for when API is unavailable
+const fallbackSuggestions = {
+  personalInfo: 'Results-driven professional with a proven track record of success in [industry]. Skilled in [skill 1], [skill 2], and [skill 3]. Passionate about delivering high-quality solutions that drive business growth.',
+  experience: '• Increased department productivity by 20% through implementation of new workflow processes\n• Led a team of 5 members to successfully deliver project ahead of schedule\n• Reduced operational costs by 15% through strategic optimizations',
+  education: '• Dean\'s List for academic excellence (4 semesters)\n• Relevant coursework: Advanced Statistics, Data Structures, Machine Learning\n• Graduated with honors, top 10% of class',
+  skills: 'Technical Skills:\n• Programming Languages: Python, JavaScript, SQL\n• Tools & Frameworks: React, Node.js, Docker\n• Concepts: Agile Development, CI/CD, Data Analysis',
+  projects: '• Designed and implemented key features that improved user engagement by 35%\n• Collaborated with cross-functional teams to deliver project under tight deadlines\n• Implemented automated testing suite that reduced bugs by 40%'
+};
 
 // Get AI suggestions for resume content
 router.post('/suggestions',
@@ -27,56 +42,62 @@ router.post('/suggestions',
       let prompt = '';
       switch (section) {
         case 'personalInfo':
-          prompt = `Generate a professional summary for a resume. 
-                   Current content: ${currentContent.summary || 'No content yet'}. 
-                   Make it concise, impactful, and highlight relevant skills and experience.
-                   Format the response as a professional summary paragraph.`;
+          prompt = `Improve this professional summary for a resume. Make it concise, impactful, and focused on achievements: "${currentContent.summary || ''}"`;
           break;
         case 'experience':
-          prompt = `Suggest improvements for the following work experience:
-                   ${JSON.stringify(currentContent.experience || [])}.
-                   Focus on quantifying achievements and using action verbs.
-                   Format the response as a list of bullet points.`;
+          prompt = `Enhance these job descriptions with strong action verbs and quantifiable achievements: ${JSON.stringify(currentContent.experience || [])}`;
           break;
         case 'education':
-          prompt = `Suggest improvements for the following education section:
-                   ${JSON.stringify(currentContent.education || [])}.
-                   Focus on highlighting relevant coursework, achievements, and academic excellence.
-                   Format the response as a list of bullet points.`;
+          prompt = `Suggest achievements and relevant coursework to add to this education section: ${JSON.stringify(currentContent.education || [])}`;
           break;
         case 'skills':
-          prompt = `Suggest relevant skills for a professional resume.
-                   Current skills: ${JSON.stringify(currentContent.skills || [])}.
-                   Include both technical and soft skills.
-                   Format the response as a list of skills with proficiency levels.`;
+          prompt = `Based on these existing skills, suggest additional relevant skills and optimized descriptions: ${JSON.stringify(currentContent.skills || [])}`;
           break;
         case 'projects':
-          prompt = `Suggest improvements for the following projects:
-                   ${JSON.stringify(currentContent.projects || [])}.
-                   Focus on highlighting technical achievements and impact.
-                   Format the response as a list of bullet points.`;
+          prompt = `Improve these project descriptions with impactful bullet points highlighting technical skills and achievements: ${JSON.stringify(currentContent.projects || [])}`;
           break;
+        default:
+          return res.status(400).json({ message: 'Invalid section' });
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional resume writer and career coach. Provide specific, actionable suggestions for improving resume content."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      });
+      // Check if OpenAI client is available
+      if (!openai || !process.env.OPENAI_API_KEY) {
+        console.log('OpenAI API not available, using fallback suggestions');
+        return res.json({
+          suggestions: fallbackSuggestions[section],
+          fromFallback: true
+        });
+      }
 
-      res.json({
-        suggestions: completion.choices[0].message.content
-      });
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo", // Use a more available model
+          messages: [
+            {
+              role: "system",
+              content: "You are a professional resume writer and career coach. Provide specific, actionable suggestions for improving resume content."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+          timeout: 5000 // 5 second timeout
+        });
+
+        res.json({
+          suggestions: completion.choices[0].message.content
+        });
+      } catch (openaiError) {
+        console.error('OpenAI API error:', openaiError);
+        // Return fallback suggestions when OpenAI API fails
+        res.json({
+          suggestions: fallbackSuggestions[section],
+          fromFallback: true
+        });
+      }
     } catch (error) {
       console.error('AI suggestions error:', error);
       res.status(500).json({ message: 'Error generating suggestions' });
@@ -100,6 +121,13 @@ router.post('/optimize',
 
       const { resumeContent, jobDescription } = req.body;
 
+      // Check if OpenAI client is available
+      if (!openai || !process.env.OPENAI_API_KEY) {
+        return res.json({
+          suggestions: "Based on the job description, consider adding more keywords related to required skills. Quantify your achievements with metrics. Customize your resume summary to match the job description."
+        });
+      }
+
       const prompt = `Analyze this resume content and job description for ATS optimization:
                      Resume: ${JSON.stringify(resumeContent)}
                      Job Description: ${jobDescription}
@@ -110,25 +138,35 @@ router.post('/optimize',
                      3. Content relevance
                      4. Missing important skills or experience`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "You are an ATS optimization expert. Provide specific suggestions for improving resume content to pass ATS screening."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      });
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo", // Use a more available model
+          messages: [
+            {
+              role: "system",
+              content: "You are an ATS optimization expert. Provide specific suggestions for improving resume content to pass ATS screening."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+          timeout: 5000 // 5 second timeout
+        });
 
-      res.json({
-        suggestions: completion.choices[0].message.content
-      });
+        res.json({
+          suggestions: completion.choices[0].message.content
+        });
+      } catch (openaiError) {
+        console.error('OpenAI API error:', openaiError);
+        // Return fallback suggestions when OpenAI API fails
+        res.json({
+          suggestions: "Based on the job description, consider adding more keywords related to required skills. Quantify your achievements with metrics. Customize your resume summary to match the job description.",
+          fromFallback: true
+        });
+      }
     } catch (error) {
       console.error('ATS optimization error:', error);
       res.status(500).json({ message: 'Error optimizing resume' });
