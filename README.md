@@ -1,101 +1,81 @@
-# AI-Powered Resume Builder
+# AI Resume Builder
 
-A modern web application that helps users create professional resumes with AI-powered suggestions and optimizations.
+A modern resume builder application with AI-powered suggestions and multiple template options.
+
+## Project Structure
+
+```
+ai-resume-builder/
+├── frontend/           # React frontend application
+│   ├── src/           # Source files
+│   │   ├── components/    # React components
+│   │   ├── pages/        # Page components
+│   │   └── store/        # Redux store and slices
+│   └── public/        # Public assets
+│
+└── backend/           # Node.js backend application
+    ├── src/          # Source files
+    │   ├── controllers/  # Route controllers
+    │   ├── models/      # Database models
+    │   └── routes/      # API routes
+    └── config/       # Configuration files
+```
 
 ## Features
 
-- User authentication and profile management
-- Multiple professional resume templates
-- Drag-and-drop resume section management
-- AI-powered content suggestions and improvements
-- ATS optimization recommendations
-- Cover letter generation
-- PDF/DOCX export
-- Resume sharing and analytics
+- AI-powered resume suggestions
+- Multiple professional templates
+- Real-time preview
+- Export to PDF
+- Responsive design
+- User authentication
+- Profile management
 
-## Technology Stack
+## Tech Stack
 
-- Frontend: React.js with Tailwind CSS/Material UI
-- Backend: Node.js with Express.js
-- Database: MongoDB
-- AI Features: OpenAI API
-- File Handling: react-pdf/puppeteer
-- State Management: Redux/React Context API
+### Frontend
+- React.js
+- Material-UI
+- Redux Toolkit
+- Framer Motion
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- JWT Authentication
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js (v14 or higher)
-- MongoDB
-- OpenAI API key
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/ai-resume-builder.git
-cd ai-resume-builder
-```
-
-2. Install backend dependencies:
-```bash
-cd backend
-npm install
-```
-
-3. Install frontend dependencies:
-```bash
-cd ../frontend
-npm install
-```
-
-4. Create a `.env` file in the backend directory:
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/ai-resume-builder
-JWT_SECRET=your_jwt_secret_key_here
-OPENAI_API_KEY=your_openai_api_key_here
-NODE_ENV=development
-```
-
-### Running the Application
-
-1. Start the backend server:
-```bash
-cd backend
-npm run dev
-```
-
-2. Start the frontend development server:
+### Frontend Setup
 ```bash
 cd frontend
+npm install
 npm start
 ```
 
-The application will be available at `http://localhost:3000`
+### Backend Setup
+```bash
+cd backend
+npm install
+npm start
+```
 
-## API Endpoints
+## Environment Variables
 
-### Authentication
-- POST `/api/auth/register` - Register a new user
-- POST `/api/auth/login` - Login user
-- GET `/api/auth/profile` - Get user profile
-- PUT `/api/auth/profile` - Update user profile
+Create `.env` files in both frontend and backend directories:
 
-### Resumes
-- GET `/api/resumes` - Get all resumes for a user
-- GET `/api/resumes/:id` - Get a single resume
-- POST `/api/resumes` - Create a new resume
-- PUT `/api/resumes/:id` - Update a resume
-- DELETE `/api/resumes/:id` - Delete a resume
-- PATCH `/api/resumes/:id/toggle-public` - Toggle resume public status
-- GET `/api/resumes/public/:id` - Get public resume by ID
+### Frontend (.env)
+```
+REACT_APP_API_URL=http://localhost:5000
+```
 
-### AI Features
-- POST `/api/ai/suggestions` - Get AI suggestions for resume content
-- POST `/api/ai/optimize` - Optimize resume for ATS
-- POST `/api/ai/cover-letter` - Generate cover letter
+### Backend (.env)
+```
+PORT=5000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+```
 
 ## Contributing
 
